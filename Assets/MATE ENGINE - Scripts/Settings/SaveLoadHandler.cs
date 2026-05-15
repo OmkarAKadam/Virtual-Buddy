@@ -44,6 +44,7 @@ public class SaveLoadHandler : MonoBehaviour
 
         LoadFromDisk();
         ApplyAllSettingsToAllAvatars();
+        MateEngine.ClaudeChatProvider.ApiKey = data.claudeApiKey;
 
         var theme = FindFirstObjectByType<ThemeManager>();
         if (theme != null)
@@ -178,6 +179,8 @@ public class SaveLoadHandler : MonoBehaviour
         public bool enableRandomAvatar = false;
 
         public bool enableLocomotion = false;
+        public string claudeApiKey = "";
+        public string aiModel = "claude-sonnet-4-20250514";
 
 
         //ALARM
@@ -219,6 +222,8 @@ public class SaveLoadHandler : MonoBehaviour
         if (data.timers == null) data.timers = new List<SettingsData.TimerEntry>();
         if (string.IsNullOrEmpty(data.selectedParticleTheme)) data.selectedParticleTheme = "Standard";
         if (data == null) data = new SettingsData();
+        if (string.IsNullOrEmpty(data.claudeApiKey)) data.claudeApiKey = "";
+        if (string.IsNullOrEmpty(data.aiModel)) data.aiModel = "claude-sonnet-4-20250514";
         if (data.alarms == null) data.alarms = new List<SettingsData.AlarmEntry>();
         if (data.settingsVersion < 1)
         {
