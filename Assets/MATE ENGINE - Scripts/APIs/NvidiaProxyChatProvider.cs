@@ -82,33 +82,46 @@ namespace MateEngine
                     }
 
                     if (request.result == UnityWebRequest.Result.Success)
-                    {
-                        string rawResponse = request.downloadHandler.text;
+{
+    string rawResponse = request.downloadHandler.text;
 
-                        // Parse response - find "content":" in the JSON and extract the value
-                        int contentIndex = rawResponse.IndexOf("\"content\":\"");
-                        if (contentIndex != -1)
-                        {
-                            int startIndex = contentIndex + 11; // Length of "\"content\":\""
-                            int endIndex = rawResponse.IndexOf("\"", startIndex);
-                            if (endIndex != -1)
-                            {
-                                string content = rawResponse.Substring(startIndex, endIndex - startIndex);
-                                content = content.Replace("\\n", "\n").Replace("\\\"", "\"").Replace("\\\\", "\\");
+    int choicesIndex = rawResponse.IndexOf("\"choices\":");
+    if (choicesIndex != -1)
+    {
+        int contentIndex = rawResponse.IndexOf("\"content\":\"", choicesIndex);
+        if (contentIndex != -1)
+        {
+            int startIdx = contentIndex + 11;
+            // Find closing quote handling escaped quotes
+            int endIdx = startIdx;
+            while (endIdx < rawResponse.Length)
+            {
+                endIdx = rawResponse.IndexOf("\"", endIdx);
+                if (endIdx == -1) break;
+                int backslashes = 0;
+                int check = endIdx - 1;
+                while (check >= 0 && rawResponse[check] == '\\') { backslashes++; check--; }
+                if (backslashes % 2 == 0) break;
+                endIdx++;
+            }
+            if (endIdx > startIdx && endIdx != -1)
+            {
+                string extracted = rawResponse.Substring(startIdx, endIdx - startIdx);
+                Debug.Log("[NvidiaProxy] Raw content: " + extracted.Substring(0, Mathf.Min(150, extracted.Length)));
+                extracted = extracted.Replace("\\n", "\n").Replace("\\\"", "\"").Replace("\\\\", "\\");
+                history.Add(new MessageData { role = "assistant", content = extracted });
+                return extracted;
+            }
+        }
+    }
 
-                                // Add assistant response to history
-                                history.Add(new MessageData { role = "assistant", content = content });
-                                return content;
-                            }
-                        }
-
-                        Debug.Log("[NvidiaProxy] Failed to parse response - raw: " + rawResponse.Substring(0, Mathf.Min(500, rawResponse.Length)));
-                        return "Failed to parse response";
-                    }
-                    else
-                    {
-                        return $"Error: {request.error} - {request.downloadHandler.text}";
-                    }
+    Debug.Log("[NvidiaProxy] Failed - raw: " + rawResponse.Substring(0, Mathf.Min(500, rawResponse.Length)));
+    return "Failed to parse response";
+}
+else
+{
+    return $"Error: {request.error} - {request.downloadHandler.text}";
+}
                 }
             }
             catch (Exception e)

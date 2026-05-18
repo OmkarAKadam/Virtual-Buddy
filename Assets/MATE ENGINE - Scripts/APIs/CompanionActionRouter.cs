@@ -7,7 +7,7 @@ namespace MateEngine
 {
     public class CompanionActionRouter : MonoBehaviour
     {
-        public string systemPrompt = "You are Virtual Buddy, a helpful desktop companion. You are friendly, concise, and proactive. When the user asks you to DO something (search, type, notify), you respond with a JSON action block AND a friendly message. Otherwise just chat.";
+        public string systemPrompt = "You are Virtual Buddy. Be friendly and concise. For actions use EXACTLY this format with NO other text before the JSON: {\"action\":\"search\",\"query\":\"...\"}. Use \"action\" not \"type\". No markdown, no code blocks, no headers. Just raw JSON then your message.";
         public TextMeshProUGUI responseText;
         public TMP_InputField inputField;
 
@@ -58,70 +58,68 @@ namespace MateEngine
         {
             try
             {
-                if (response.Contains("{\"action\":\"search\""))
+                response = response.Replace("```json", "").Replace("```", "").Trim();
+                response = response.Replace("**Action Block:**", "").Trim();
+                // Also handle "type" field as alias for "action"
+                response = response.Replace("\"type\": \"search\"", "\"action\": \"search\"");
+                response = response.Replace("\"type\": \"type\"", "\"action\": \"type\"");
+                response = response.Replace("\"type\": \"notify\"", "\"action\": \"notify\"");
+
+                // Detect action - handle both "action":"search" and "action": "search"
+                bool isSearch = response.Contains("\"action\":\"search\"") || response.Contains("\"action\": \"search\"");
+                bool isType = response.Contains("\"action\":\"type\"") || response.Contains("\"action\": \"type\"");
+                bool isNotify = response.Contains("\"action\":\"notify\"") || response.Contains("\"action\": \"notify\"");
+                bool isClipboard = response.Contains("\"action\":\"clipboard_write\"") || response.Contains("\"action\": \"clipboard_write\"");
+
+                if (isSearch)
                 {
-                    // Extract query value
-                    int startIndex = response.IndexOf("\"query\":\"") + 9;
+                    string queryKey = response.Contains("\"query\": \"") ? "\"query\": \"" : "\"query\":\"";
+                    int startIndex = response.IndexOf(queryKey) + queryKey.Length;
                     int endIndex = response.IndexOf("\"", startIndex);
                     string query = response.Substring(startIndex, endIndex - startIndex);
-
-                    // Execute search action
-                    string searchResult = await serverClient.SearchAsync(query);
-
-                    // Show typing animation
+                    await serverClient.SearchAsync(query);
                     if (animController != null) animController.StartTyping();
                     await Task.Delay(3000);
                     if (animController != null) animController.StopTyping();
                 }
-                else if (response.Contains("{\"action\":\"type\""))
+                else if (isType)
                 {
-                    // Extract text value
-                    int startIndex = response.IndexOf("\"text\":\"") + 9;
+                    string textKey = response.Contains("\"text\": \"") ? "\"text\": \"" : "\"text\":\"";
+                    int startIndex = response.IndexOf(textKey) + textKey.Length;
                     int endIndex = response.IndexOf("\"", startIndex);
                     string text = response.Substring(startIndex, endIndex - startIndex);
-
-                    // Execute type action
-                    string typeResult = await serverClient.TypeTextAsync(text);
-
-                    // Show typing animation
+                    await serverClient.TypeTextAsync(text);
                     if (animController != null) animController.StartTyping();
                     await Task.Delay(2000);
                     if (animController != null) animController.StopTyping();
                 }
-                else if (response.Contains("{\"action\":\"notify\""))
+                else if (isNotify)
                 {
-                    // Extract title and message values
-                    int titleStartIndex = response.IndexOf("\"title\":\"") + 9;
-                    int titleEndIndex = response.IndexOf("\"", titleStartIndex);
-                    string title = response.Substring(titleStartIndex, titleEndIndex - titleStartIndex);
-
-                    int messageStartIndex = response.IndexOf("\"message\":\"") + 11;
-                    int messageEndIndex = response.IndexOf("\"", messageStartIndex);
-                    string message = response.Substring(messageStartIndex, messageEndIndex - messageStartIndex);
-
-                    // Execute notification action
-                    string notifyResult = await serverClient.NotifyAsync(title, message);
+                    string titleKey = response.Contains("\"title\": \"") ? "\"title\": \"" : "\"title\":\"";
+                    int titleStart = response.IndexOf(titleKey) + titleKey.Length;
+                    int titleEnd = response.IndexOf("\"", titleStart);
+                    string title = response.Substring(titleStart, titleEnd - titleStart);
+                    string msgKey = response.Contains("\"message\": \"") ? "\"message\": \"" : "\"message\":\"";
+                    int msgStart = response.IndexOf(msgKey) + msgKey.Length;
+                    int msgEnd = response.IndexOf("\"", msgStart);
+                    string message = response.Substring(msgStart, msgEnd - msgStart);
+                    await serverClient.NotifyAsync(title, message);
                 }
-                else if (response.Contains("{\"action\":\"clipboard_write\""))
+                else if (isClipboard)
                 {
-                    // Extract text value
-                    int startIndex = response.IndexOf("\"text\":\"") + 8;
+                    string textKey = response.Contains("\"text\": \"") ? "\"text\": \"" : "\"text\":\"";
+                    int startIndex = response.IndexOf(textKey) + textKey.Length;
                     int endIndex = response.IndexOf("\"", startIndex);
                     string text = response.Substring(startIndex, endIndex - startIndex);
-
-                    // Execute clipboard write action
-                    string clipboardResult = await serverClient.WriteClipboardAsync(text);
+                    await serverClient.WriteClipboardAsync(text);
                 }
 
-                // Strip the JSON block from response before displaying text
-                if (response.Contains("{\"action\":"))
+                // Strip JSON block before displaying
+                if (isSearch || isType || isNotify || isClipboard)
                 {
-                    int jsonEndIndex = response.LastIndexOf("}") + 1;
-                    response = response.Substring(jsonEndIndex).Trim();
+                    int jsonEnd = response.LastIndexOf("}") + 1;
+                    response = response.Substring(jsonEnd).Trim();
                 }
-
-                if (responseText != null)
-                    responseText.text = response;
             }
             catch (Exception ex)
             {
