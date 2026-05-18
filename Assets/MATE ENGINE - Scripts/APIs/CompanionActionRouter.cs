@@ -7,7 +7,7 @@ namespace MateEngine
 {
     public class CompanionActionRouter : MonoBehaviour
     {
-        public string systemPrompt = "You are Virtual Buddy. Be friendly and concise. For actions use EXACTLY this format with NO other text before the JSON: {\"action\":\"search\",\"query\":\"...\"}. Use \"action\" not \"type\". No markdown, no code blocks, no headers. Just raw JSON then your message.";
+        public string systemPrompt = "You are Virtual Buddy, a desktop companion. Be VERY concise - max 8 words per response. For actions output raw JSON first then 3-4 word confirmation. Format for search: {\"action\":\"search\",\"query\":\"...\"} then write 'Searching for X...' only. For chat: reply in max 8 words. No markdown, no bullets, no lists, no long explanations.";
         public TextMeshProUGUI responseText;
         public TMP_InputField inputField;
 
@@ -42,6 +42,18 @@ namespace MateEngine
 
                 string response = await claudeProvider.SendMessageAsync(userMessage, systemPrompt);
                 response = await ParseAndExecute(response);
+                // Truncate to first sentence only for display
+                if (response.Length > 60)
+                {
+                    int periodIdx = response.IndexOf('.');
+                    int exclamIdx = response.IndexOf('!');
+                    int questionIdx = response.IndexOf('?');
+                    int cutAt = response.Length;
+                    if (periodIdx > 0 && periodIdx < cutAt) cutAt = periodIdx + 1;
+                    if (exclamIdx > 0 && exclamIdx < cutAt) cutAt = exclamIdx + 1;
+                    if (questionIdx > 0 && questionIdx < cutAt) cutAt = questionIdx + 1;
+                    if (cutAt < response.Length) response = response.Substring(0, cutAt).Trim();
+                }
 
                 if (responseText != null)
                     responseText.text = response;
