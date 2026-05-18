@@ -11,7 +11,7 @@ namespace MateEngine
         public TextMeshProUGUI responseText;
         public TMP_InputField inputField;
 
-        private ClaudeChatProvider claudeProvider;
+        private IAIChatProvider claudeProvider;
         private CompanionServerClient serverClient;
         private AvatarActionAnimationController animController;
 
@@ -19,7 +19,8 @@ namespace MateEngine
         {
             try
             {
-                claudeProvider = new ClaudeChatProvider();
+                // claudeProvider = new ClaudeChatProvider();
+                claudeProvider = new NvidiaProxyChatProvider();
                 serverClient = CompanionServerClient.Instance;
                 animController = AvatarActionAnimationController.Instance;
             }

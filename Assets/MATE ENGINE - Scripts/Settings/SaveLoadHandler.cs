@@ -45,6 +45,8 @@ public class SaveLoadHandler : MonoBehaviour
         LoadFromDisk();
         ApplyAllSettingsToAllAvatars();
         MateEngine.ClaudeChatProvider.ApiKey = data.claudeApiKey;
+        if (!string.IsNullOrEmpty(data.claudeApiKey))
+            MateEngine.NvidiaProxyChatProvider.ApiKey = data.claudeApiKey;
 
         var theme = FindFirstObjectByType<ThemeManager>();
         if (theme != null)
