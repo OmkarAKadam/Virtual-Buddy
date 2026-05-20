@@ -72,6 +72,11 @@ namespace MateEngine
             {
                 response = response.Replace("```json", "").Replace("```", "").Trim();
                 response = response.Replace("**Action Block:**", "").Trim();
+                // response = response.Replace("**Friendly Message**", "").Trim();
+                response = response.Replace("**JSON Action Block:**", "").Trim();
+                response = response.Replace("**Message:**", "").Trim();
+                // Remove leading/trailing quotes
+                response = response.Trim('"');
                 // Also handle "type" field as alias for "action"
                 response = response.Replace("\"type\": \"search\"", "\"action\": \"search\"");
                 response = response.Replace("\"type\": \"type\"", "\"action\": \"type\"");
